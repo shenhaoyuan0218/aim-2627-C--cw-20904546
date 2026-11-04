@@ -17,10 +17,57 @@
 namespace aim::q2 {
 struct LabelEdit { std::string from; std::string to; };
 
+
 // BEGIN IMPLEMENTATION
-std::string edit_labels(std::string labels, const std::vector<LabelEdit>& edits) { throw std::runtime_error("TODO"); }
+std::string edit_labels(std::string labels, const std::vector<LabelEdit>& edits){
+    for (const auto& edit : edits) {
+
+        if (edit.from.empty()){
+            
+            if (!edit.to.empty()){
+                if (labels.empty()){
+                    labels += edit.to;
+                } else {
+                    labels += ",";
+                    labels += edit.to;
+                }
+            }
+        } else {
+            
+            std::string::size_type pos = labels.find(edit.from);
+            while (pos != std::string::npos) {
+                bool check_left  = (pos == 0 || labels[pos - 1] == ',');
+                bool check_right = (pos + edit.from.size() == labels.size() ||
+                                    labels[pos + edit.from.size()] == ',');
+                if (check_left && check_right) {
+                    break;
+                }
+                pos = labels.find(edit.from, pos + 1);
+            }
+
+            if (pos != std::string::npos){
+                if (!edit.to.empty()){
+                    
+                    labels.replace(pos, edit.from.size(), edit.to);
+                } else {
+                    
+                    std::string::size_type len = edit.from.size();
+                    if (pos + len < labels.size()) {
+                        labels.erase(pos, len + 1);
+                    } else if (pos > 0) {
+                        labels.erase(pos - 1, len + 1);
+                    } else {
+                        labels.erase(pos, len);
+                    }
+                }
+            }
+        }
+    }
+    return labels;
+}
 // END IMPLEMENTATION
 }
+
 
 #define CHECK(...) do { if (!(__VA_ARGS__)) throw std::runtime_error("check failed"); } while(false)
 #define EXPECT_INVALID(...) do { bool caught=false; try { (void)(__VA_ARGS__); } catch(const std::invalid_argument&) { caught=true; } CHECK(caught); } while(false)
