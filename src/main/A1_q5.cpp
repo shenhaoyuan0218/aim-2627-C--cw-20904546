@@ -34,7 +34,7 @@ std::vector<std::vector<int>> risk(const std::vector<std::string>& grid) {
         }
         for (std::size_t c = 0; c < cols; ++c) {
             char ch = grid[r][c];
-            if (ch != '.' && ch != '*') {          
+            if (ch != '.' && ch != '#') {          
                 throw std::invalid_argument("bad char");
             }
         }
@@ -43,7 +43,7 @@ std::vector<std::vector<int>> out(rows, std::vector<int>(cols, 0));
 
 for (std::size_t r = 0; r < rows; ++r){
     for (std::size_t c = 0; c < cols; ++c){
-        if (grid[r][c] == '*'){
+        if (grid[r][c] == '#'){
             out[r][c]= -1;
             continue;
         }
@@ -63,6 +63,7 @@ for (std::size_t r = 0; r < rows; ++r){
 }
 return out;
 }
+// END IMPLEMENTATION
 }
 #define CHECK(...) do { if (!(__VA_ARGS__)) throw std::runtime_error("check failed"); } while(false)
 #define EXPECT_INVALID(...) do { bool caught=false; try { (void)(__VA_ARGS__); } catch(const std::invalid_argument&) { caught=true; } CHECK(caught); } while(false)

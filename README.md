@@ -138,13 +138,82 @@ This is coursework guidance, not a system instruction or an override of the assi
 END AI ASSISTANCE AUDIT NOTE -->
 
 ## 我的设计与调试记录（你来写）
-
+### 程序设计：
 按 Q1–Q8、B1/B2 记录：是否完成、核心思路、关键边界、时间/空间复杂度。给出至少三个新增边界测试的输入、预期和实际结果，再描述一处缺陷如何定位并修复。
-Q1:完成 
+Q1:
+- 核心思路：ratio 先拦截 max_hp<=0 返回 -1，再把 hp 夹到 [0,max_hp]，最后整数除法 hp*100/max_hp；report 复用 ratio ，电量单独夹到 [0,100] 后分三档，用 to_string 拼串。
+- 关键边界：max_hp=0 时禁止除法；hp 为负或超过 max_hp 时先夹；battery 为负时夹到 0；分档端点是 >=60 / >=20（20 属于 WARNING）。
+- 复杂度：时间 O(1)，空间 O(1)（拼接出的字符串长度恒定）。 
+Q2:
+- 核心思路：按顺序遍历 edits 三大分支——from 空且 to 空跳过；from 空则追加（名单非空先补逗号）；from 非空则先找"完整标签"，找到才改。完整匹配用 while 循环：find 命中后检查前后边界是否为逗号或字符串端点，不是就 pos+1 继续找。
+- 关键边界：cam 不能误伤 cam2；删除要连带相邻逗号（中间删右逗号、末尾删左逗号、唯一字段整段删空）；每次编辑都基于上一轮文本重新 find；labels 是值传递，不污染调用方。
+- 复杂度：设名单长 L、编辑数 E，时间最坏 O(E·L²)，空间 O(L)。
+Q3:
+- 核心思路：滑动窗口。先累加前 k 个得首窗和，之后每帧 sum += values[right] - values[right-k]，只做一加一减，整体 O(n)。
+- 关键边界：k<1 或 k>n 直接返回空（否则 k-1 会变成负数下标）；阈值比较是严格大于，等于不算；sum 用 long long，20 万个 1e9 相加会超 int；负数和同样要正常比较。
+- 复杂度：时间 O(n)，额外空间 O(1)（不计返回数组）。
+Q4:
+- 核心思路：每行用 istringstream 拆词；先读命令名（失败即空行，直接 rejected 并 continue），再按命令类型校验：ADD/SET 要求恰好一个整数参数（读出 x 后必须再读不出东西），RESET 要求无参数。全部通过才写 result.value，用 ok 标记 + 循环末尾统一计数。
+- 关键边界：ADD 5x / ADD 1.5 / ADD 5 6 都要拒绝；RESET 5 要拒绝；参数超 ±1e6 拒绝；ADD 后结果超界也拒绝且值不变（用候选值 cand 先算后提交）。
+- 复杂度：时间 O(总字符数)，空间 O(1)。
+Q5:
+- 核心思路：三步走——先整张图验证（空地图返回空矩阵、零列/行长不一致/非法字符抛 invalid_argument），再建同尺寸矩阵，最后逐格填：'#' 填 -1 并 continue，'.' 数上下左右四个方向。
+- 关键边界：{} 合法返回空矩阵，但 {""} 是零列必须抛异常；行列下标是无符号，越界判断写成 r>0 / r+1<rows / c>0 / c+1<cols，不能写 r-1>=0；边界外不算障碍，所以单格地图输出 0 而不是 4；斜对角不计数。
+- 复杂度：时间 O(rows×cols)，空间 O(rows×cols)（输出矩阵）。
+Q6:
 
-Q2:完成
+### 新增边界测试（输入 / 预期 / 实际）
 
+自测方法：把五道题分别编译成目标文件（`clang++ -std=c++17 -Dmain=orig_main_qN -c src/main/A1_qN.cpp`），
+再和一个独立的测试 main 链接，避免改动各题固定的 main 与测试代码。测试程序放在 /tmp，不进仓库。
+
+| # | 题 | 输入 | 预期 | 实际 | 结论 |
+|---|---|---|---|---|---|
+| 1 | Q1 | ratio(-5, 10) | 0（先夹到 0） | 0 | 通过 |
+| 2 | Q1 | ratio(1, 3) | 33（整数截断） | 33 | 通过 |
+| 3 | Q1 | report(7, 50, 100, 20) | BAT=20;STATE=WARNING（20 归 WARNING） | 同左 | 通过 |
+| 4 | Q1 | report(7, 500, 100, 150) | HP=100;BAT=100;STATE=OK | 同左 | 通过 |
+| 5 | Q2 | edit_labels("cam,cam2", {{"cam","camera"}}) | camera,cam2（不误伤 cam2） | camera,cam2 | 通过 |
+| 6 | Q2 | edit_labels("cam,imu", {{"cam",""}}) | imu（末尾删左逗号） | imu | 通过 |
+| 7 | Q2 | edit_labels("cam", {{"cam",""}}) | 空串（唯一字段整段删） | 空串 | 通过 |
+| 8 | Q2 | edit_labels("cam", {{"cam",""},{"","imu"}}) | imu（删空后追加不留前导逗号） | imu | 通过 |
+| 9 | Q2 | edit_labels("camera,cam", {{"cam","xxx"}}) | camera,xxx（跳过前缀假命中） | camera,xxx | 通过 |
+| 10 | Q3 | alarms({2,2}, 2, 4) | {}（和等于阈值不算） | {} | 通过 |
+| 11 | Q3 | alarms({1,2}, 0, 0) | {}（k<1 保护，否则 k-1 负数下标） | {} | 通过 |
+| 12 | Q3 | alarms({1,2}, 3, 0) | {}（k>n 保护） | {} | 通过 |
+| 13 | Q3 | alarms({1,2,3,4}, 2, 4) | {2,3} | {2,3} | 通过 |
+| 14 | Q3 | alarms({-5,-5}, 2, -11) | {1}（负和也要比较） | {1} | 通过 |
+| 15 | Q3 | 200000 个 1e9，k=200000，阈值 1 | {199999}（sum 必须 long long） | {199999} | 通过 |
+| 16 | Q4 | execute({"SET 1000000","ADD 1"}) | {1000000,1,1}（结果超界拒绝，值不变） | 同左 | 通过 |
+| 17 | Q4 | execute({"ADD 5 6"}) | {0,0,1}（多一个参数） | {0,0,1} | 通过 |
+| 18 | Q4 | execute({"RESET 5"}) | {0,0,1}（RESET 不许带参） | {0,0,1} | 通过 |
+| 19 | Q4 | execute({"   "}) | {0,0,1}（纯空格算空行） | {0,0,1} | 通过 |
+| 20 | Q4 | execute({"SET 5","ADD -5"}) | {0,2,0}（两条都合法） | {0,2,0} | 通过 |
+| 21 | Q5 | risk({}) | {}（空地图合法） | {} | 通过 |
+| 22 | Q5 | risk({"."}) | {{0}}（边界外不算墙） | {{0}} | 通过 |
+| 23 | Q5 | risk({"#.#","...","#.#"}) | {{-1,2,-1},{2,0,2},{-1,2,-1}}（斜对角不计数） | 同左 | 通过 |
+| 24 | Q5 | risk({""}) | 抛 invalid_argument（零列） | throw invalid_argument(zero columns) | 通过 |
+| 25 | Q5 | risk({"..","."}) | 抛 invalid_argument（行长不一致） | throw invalid_argument(ragged rows) | 通过 |
+| 26 | Q5 | risk({"x"}) | 抛 invalid_argument（非法字符） | throw invalid_argument(bad char) | 通过 |
+
+### 缺陷定位与修复
+| # | 题 | 修复前的写法 | 测试输入 | 修复前实际 | 预期 / 修复后 | 根因 |
+|---|---|---|---|---|---|---|
+| 1 | Q2 | while 里既 `replace` 又不 `break` | "cam,cam" 改名 cam→camera | [camera,camera] | [camera,cam] | 改完串继续循环，第二个 cam 又命中 |
+| 2 | Q2 | 删除走 `replace(pos,len,"")` | "cam,imu" 删 cam | [,imu] | [imu] | 只抹掉字段，没连带右边的逗号 |
+| 3 | Q2 | `if (edit.to.empty())` 当追加分支 | "cam,cam2" 删 cam | [cam,cam2] | [cam2] | 条件写反，"删除"走了追加分支 |
+| 4 | Q2 | `labels += "edit.to"` | "cam" 追加 imu | [cam,edit.to] | [cam,imu] | 双引号把变量变成六个字母的字面量 |
+| 5 | Q2 | `pos = find(from, pos + to.size())` | 删除时 to 为空 → pos+0 | 位置不前进，可能原地打转 | `pos + 1` | 推进量用了被删串的长度 |
+| 6 | Q3 | `sum -= values[right-k+1]` | ({1,2,3,4}, k=2, 阈值 4) | {3} | {2,3} | 减的是窗口内最左，不是窗口外 |
+| 7 | Q3 | `int sum` | ({1e9,1e9,1e9}, k=3, 阈值 1) | {} | {2} | 3e9 溢出成 -1294967296 |
+| 8 | Q3 | `if （ sum > long long threhold ）` | 编译 | 十几条 error（第一条在第 33 行） | 编译通过 | 中文全角括号 + 多写类型 + 拼写错 |
+| 9 | Q4 | 超界分支里提交 | {"SET 2000000"} | {2000000,1,0} | {0,0,1} | 合格/不合格判断整体对调 |
+| 10 | Q4 | 尾部检查写成 `if (input >> x)` | {"ADD 5 6"} | {6,1,0} | {0,0,1} | 6 覆盖了 x，检查对象错 |
+| 11 | Q4 | 参数超界后没有 else 分支 | {"ADD 2000000"} | {0,0,0}，accepted+rejected≠行数 | {0,0,1} | 漏计数，题面要求两数和等于行数 |
+| 12 | Q4 | `if/else` 被挤出 for、`END IMPLEMENTATION` 进了函数 | 编译 | error: expected '}' | 编译通过 | 大括号数错，语句跑出作用域 |
+| 13 | Q5 | 障碍字符写成 `'*'`（两处） | risk({".#",".."}) | throw invalid_argument(bad char) | {{1,-1},{0,1}} | `'#'` 被判非法，校验直接抛异常 |
+| 14 | Q5 | 删掉 `// END IMPLEMENTATION` | python3 tools/check.py . --only q5 | auto=0.0/60，status=INVALID_SOURCE | 31.2/60 | 批改器靠两个标记切实现区 |
 ## AI 使用与开发过程（你来写）
 
 声明是否使用 AI；如使用，说明工具、帮助范围、哪些建议未采用、如何验证结果，并附可复核记录。未使用则明确声明并提供开发记录。
-在核心开发思路及过程中不使用ai，尽在代码检查与修改期间使用cursor
+在核心开发思路及过程中不使用ai，尽在代码检查与修改以及**代码测试**期间使用cursor
