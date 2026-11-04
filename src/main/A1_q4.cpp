@@ -18,9 +18,66 @@ namespace aim::q4 {
 struct CommandResult { long long value; int accepted; int rejected; };
 
 // BEGIN IMPLEMENTATION
-CommandResult execute(const std::vector<std::string>& lines) { throw std::runtime_error("TODO"); }
+CommandResult execute(const std::vector<std::string>& lines) {
+    CommandResult result{0, 0, 0};
+
+    for (const std::string& line : lines) {
+        std::istringstream input(line);
+
+        
+        std::string op;
+        if (!(input >> op)) {
+            ++result.rejected;
+            continue;
+        }
+
+        bool ok = false;   
+
+        if (op == "ADD" || op == "SET") {
+            long long x = 0;
+            std::string extra;
+
+            
+            if (input >> x) {
+                
+                if (!(input >> extra)) {
+                    
+                    if (x >= -1000000 && x <= 1000000) {
+                        long long cand;
+                        if (op == "ADD") {
+                            cand = result.value + x;
+                        } else {
+                            cand = x;
+                        }
+                        
+                        if (cand >= -1000000 && cand <= 1000000) {
+                            result.value = cand;   
+                            ok = true;
+                        }
+                    }
+                }
+            }
+        } else if (op == "RESET") {
+            std::string extra;
+            
+            if (!(input >> extra)) {
+                result.value = 0;
+                ok = true;
+            }
+        }
+        
+        if (ok) {
+            ++result.accepted;
+        } else {
+            ++result.rejected;
+        }
+    }
+
+    return result;
+}
 // END IMPLEMENTATION
 }
+
 
 #define CHECK(...) do { if (!(__VA_ARGS__)) throw std::runtime_error("check failed"); } while(false)
 #define EXPECT_INVALID(...) do { bool caught=false; try { (void)(__VA_ARGS__); } catch(const std::invalid_argument&) { caught=true; } CHECK(caught); } while(false)
