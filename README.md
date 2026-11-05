@@ -258,7 +258,7 @@ Q8:
 
 ### 使用的工具
 
-使用 AI 辅助开发，如实声明。工具为 **Tencent WorkBuddy（Agent 模式）**，会话按仓库路径保存在 `~/.workbuddy/projects/` 下。
+使用 AI 辅助开发，如实声明。工具为 workbuddy（免费版）
 
 ### 使用范围
 

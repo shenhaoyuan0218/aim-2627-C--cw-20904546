@@ -18,8 +18,9 @@ namespace aim::b1 {
 
 
 // BEGIN IMPLEMENTATION
-bool parse_i32(const std::string& text, int& output) { throw std::runtime_error("TODO"); }
-// END IMPLEMENTATION
+bool parse_i32(const std::string& text, int& output){
+    
+}
 }
 
 #define CHECK(...) do { if (!(__VA_ARGS__)) throw std::runtime_error("check failed"); } while(false)
