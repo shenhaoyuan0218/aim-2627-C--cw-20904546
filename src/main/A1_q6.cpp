@@ -36,7 +36,8 @@ int select_target(const std::vector<Target>& targets, int max_range){
         long long dx = t.x;
         long long dy = t.y;
         long long d = dx * dx + dy * dy;
-        if (d > max_range * max_range){
+        long long r = max_range;
+        if (d > r * r){
             continue;
         }
 

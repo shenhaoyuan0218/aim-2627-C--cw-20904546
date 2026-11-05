@@ -195,24 +195,31 @@ Q6:
 | 24 | Q5 | risk({""}) | 抛 invalid_argument（零列） | throw invalid_argument(zero columns) | 通过 |
 | 25 | Q5 | risk({"..","."}) | 抛 invalid_argument（行长不一致） | throw invalid_argument(ragged rows) | 通过 |
 | 26 | Q5 | risk({"x"}) | 抛 invalid_argument（非法字符） | throw invalid_argument(bad char) | 通过 |
+| 27 | Q6 | select_target({{9,1000000,0,10,true}}, 1000000) | 9（距离正好等于射程，边界合格） | 9 | 通过 |
+| 28 | Q6 | select_target({{5,1000001,0,10,true}}, 1000000) | -1（超射程 1 就不行） | -1 | 通过 |
+| 29 | Q6 | select_target({{8,-1000000,0,10,true}}, 1000000) | 8（负坐标平方后仍正确） | 8 | 通过 |
+| 30 | Q6 | select_target({{4,999999,999999,10,true}}, 2000000) | 4（平方和 2e12，必须 long long） | 4 | 通过 |
+| 31 | Q6 | select_target({{1,1,0,30,true},{2,4,0,45,true}}, 10) | 2（hp 高者优先，哪怕更远） | 2 | 通过 |
+| 32 | Q6 | select_target({{1,3,0,20,true},{2,1,0,20,true}}, 10) | 2（同 hp，距离近者胜） | 2 | 通过 |
+| 33 | Q6 | select_target({{7,3,4,20,true},{2,0,5,20,true}}, 5) | 2（hp、距离全平，比 id 小者） | 2 | 通过 |
+| 34 | Q6 | select_target({{1,0,0,50,true},{2,0,0,60,false},{3,0,0,0,true},{4,2,2,40,true}}, 10) | 1（不可见的 60 和 hp=0 的都被筛掉，选可见存活里 hp 最高的 50） | 1 | 通过 |
+| 35 | Q6 | select_target({{1,50,0,99,true},{2,3,0,10,true}}, 10) | 2（hp 最高但超射程，选射程内的） | 2 | 通过 |
+| 36 | Q6 | select_target({{1,0,0,10,true}}, -3) | -1（负射程） | -1 | 通过 |
+
 
 ### 缺陷定位与修复
-| # | 题 | 修复前的写法 | 测试输入 | 修复前实际 | 预期 / 修复后 | 根因 |
+
+| # | 题 | 缺陷（修复前的写法） | 测试输入 | 修复前实际 | 预期 / 修复后 | 根因 |
 |---|---|---|---|---|---|---|
-| 1 | Q2 | while 里既 `replace` 又不 `break` | "cam,cam" 改名 cam→camera | [camera,camera] | [camera,cam] | 改完串继续循环，第二个 cam 又命中 |
-| 2 | Q2 | 删除走 `replace(pos,len,"")` | "cam,imu" 删 cam | [,imu] | [imu] | 只抹掉字段，没连带右边的逗号 |
-| 3 | Q2 | `if (edit.to.empty())` 当追加分支 | "cam,cam2" 删 cam | [cam,cam2] | [cam2] | 条件写反，"删除"走了追加分支 |
-| 4 | Q2 | `labels += "edit.to"` | "cam" 追加 imu | [cam,edit.to] | [cam,imu] | 双引号把变量变成六个字母的字面量 |
-| 5 | Q2 | `pos = find(from, pos + to.size())` | 删除时 to 为空 → pos+0 | 位置不前进，可能原地打转 | `pos + 1` | 推进量用了被删串的长度 |
-| 6 | Q3 | `sum -= values[right-k+1]` | ({1,2,3,4}, k=2, 阈值 4) | {3} | {2,3} | 减的是窗口内最左，不是窗口外 |
-| 7 | Q3 | `int sum` | ({1e9,1e9,1e9}, k=3, 阈值 1) | {} | {2} | 3e9 溢出成 -1294967296 |
-| 8 | Q3 | `if （ sum > long long threhold ）` | 编译 | 十几条 error（第一条在第 33 行） | 编译通过 | 中文全角括号 + 多写类型 + 拼写错 |
-| 9 | Q4 | 超界分支里提交 | {"SET 2000000"} | {2000000,1,0} | {0,0,1} | 合格/不合格判断整体对调 |
-| 10 | Q4 | 尾部检查写成 `if (input >> x)` | {"ADD 5 6"} | {6,1,0} | {0,0,1} | 6 覆盖了 x，检查对象错 |
-| 11 | Q4 | 参数超界后没有 else 分支 | {"ADD 2000000"} | {0,0,0}，accepted+rejected≠行数 | {0,0,1} | 漏计数，题面要求两数和等于行数 |
-| 12 | Q4 | `if/else` 被挤出 for、`END IMPLEMENTATION` 进了函数 | 编译 | error: expected '}' | 编译通过 | 大括号数错，语句跑出作用域 |
-| 13 | Q5 | 障碍字符写成 `'*'`（两处） | risk({".#",".."}) | throw invalid_argument(bad char) | {{1,-1},{0,1}} | `'#'` 被判非法，校验直接抛异常 |
-| 14 | Q5 | 删掉 `// END IMPLEMENTATION` | python3 tools/check.py . --only q5 | auto=0.0/60，status=INVALID_SOURCE | 31.2/60 | 批改器靠两个标记切实现区 |
+| 1 | Q2 | 查找循环里直接执行替换且不 `break`，推进量写成 `pos + to.size()` | "cam,cam" 改名 cam→camera | [camera,camera] | [camera,cam] | 把"查找"和"修改"混在同一层：改完后循环继续在新串里搜，第二个 cam 又被命中；删除时推进量为 0，位置不前进 |
+| 2 | Q2 | 删除只执行 `replace(pos,len,"")`，不处理相邻逗号 | "cam,imu" 删 cam | [,imu] | [imu] | 逗号是分隔符、不属于字段本身；删除必须按位置分三种情况连带抹掉一侧逗号 |
+| 3 | Q3 | 窗口移出元素写成 `values[right-k+1]` | alarms({1,2,3,4}, 2, 4) | {3} | {2,3} | 窗口是 [right-k+1, right]，新元素刚加进来，要减的是窗口外左侧的 right-k；减错后每次多算一个元素，和越滚越大 |
+| 4 | Q3 | 累加器声明为 `int` | alarms({1e9,1e9,1e9}, 3, 1) | {} | {2} | 3e9 超出 int 范围回绕成 -1294967296，溢出不报错只给错值；改用 long long 后通过 |
+| 5 | Q4 | 范围判断与提交写在同一分支且逻辑对调；参数超界路径没有 else 计数 | {"SET 2000000"} / {"ADD 2000000"} | {2000000,1,0} / {0,0,0} | {0,0,1} / {0,0,1} | 破坏了事务语义（超界值被写入）和计数不变量（accepted+rejected 必须等于行数）；改为 cand 先算候选、全部校验通过才提交，ok 标记末尾统一结算 |
+| 6 | Q4 | 尾部多余内容的检查写成再读一次数字 `if (input >> x)` | {"ADD 5 6"} | {6,1,0} | {0,0,1} | 检查对象错了：6 被读进 x 覆盖了 5，命令反而通过；尾部必须读进字符串变量，读不到才合格 |
+| 7 | Q5 | 单文件自测通过但批改器 0 分 | python3 tools/check.py . --only q5 | auto=0.0/60，status=INVALID_SOURCE | 31.2/60 | 实现区的 `// END IMPLEMENTATION` 标记在编辑中被误删；批改器靠两个标记切出实现区重新编译，缺一个整题判无效。定位过程：先确认公开检查 2/2 通过（排除逻辑问题）→ 查批改器报告 JSON 发现 INVALID_SOURCE → 读 tools/check.py 的切分逻辑 → 回看源文件。教训：文件自身能跑 ≠ 批改器能提取 |
+| 8 | Q6 | 射程比较用 `max_range * max_range`（int 乘法） | select_target({{9,1000000,0,10,true}}, 1000000) | -1 | 9 | 1e6² = 1e12 超出 int，回绕成负数，导致 d > 负数 恒真、所有目标被判超射程；先把射程升为 long long 再平方 |
+
 ## AI 使用与开发过程（你来写）
 
 声明是否使用 AI；如使用，说明工具、帮助范围、哪些建议未采用、如何验证结果，并附可复核记录。未使用则明确声明并提供开发记录。
