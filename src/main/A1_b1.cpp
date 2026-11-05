@@ -19,8 +19,33 @@ namespace aim::b1 {
 
 // BEGIN IMPLEMENTATION
 bool parse_i32(const std::string& text, int& output){
+        if (text.empty()) return false;
+
+        std::size_t i = 0;
+        bool negative = false;
+
+        if (text[0] == '+' || text[0] == '-'){
+            negative = (text[0] == '-');     // 是 '-' 才记负数
+            i = 1;
+        }
+        if ( i >= text.size()) return false;
+
+        long long limit = negative ? 2147483648LL : 2147483647LL;
+        long long acc = 0;
+
+        for (; i <text.size(); ++i){
+            char c = text[i];
+            if (c < '0' || c > '9') return false;
+            int digit = c - '0';
+            if (acc > (limit - digit) / 10) return false;
+            acc = acc * 10 + digit;
+
+        }
+        output = static_cast<int>(negative ? -acc : acc);
+        return true;
     
 }
+// END IMPLEMENTATION
 }
 
 #define CHECK(...) do { if (!(__VA_ARGS__)) throw std::runtime_error("check failed"); } while(false)
