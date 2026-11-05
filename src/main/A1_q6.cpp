@@ -39,9 +39,28 @@ int select_target(const std::vector<Target>& targets, int max_range){
         if (d > max_range * max_range){
             continue;
         }
-        
 
-
+    bool is_better;
+    if (!has_best){
+        is_better = true;
+    }else if (t.hp > best_hp){
+        is_better = true;
+    } else if (t.hp == best_hp && d < best_d){
+        is_better = true;
+    } else if (t.hp == best_hp && d == best_d && t.id < best_id){
+        is_better = true;
+    } else {
+        is_better = false;
+    }
+    if (is_better){
+        has_best = true;
+        best_hp  = t.hp;
+        best_d   = d;
+        best_id  = t.id;
+    }
+    }
+    return has_best ? best_id : -1;
+    
 }
 
 // END IMPLEMENTATION
