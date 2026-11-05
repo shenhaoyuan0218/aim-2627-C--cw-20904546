@@ -44,7 +44,7 @@ int select_target(const std::vector<Target>& targets, int max_range){
     bool is_better;
     if (!has_best){
         is_better = true;
-    }else if (t.hp > best_hp){
+    }else if (t.hp < best_hp){
         is_better = true;
     } else if (t.hp == best_hp && d < best_d){
         is_better = true;
